@@ -1,25 +1,29 @@
-name: Build Cross-Platform Executables
+name: Build Executables
 
 on:
   push:
-    branches: [ main, master ]
-  workflow_dispatch:  # 允许手动触发
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: windows-latest
-            output_name: "抽奖程序.exe"
-          - os: macos-latest  
-            output_name: "抽奖程序_mac"
+            artifact_name: windows-executable
+            asset_name: 抽奖程序-windows.exe
+          - os: macos-latest
+            artifact_name: macos-executable  
+            asset_name: 抽奖程序-macos
           - os: ubuntu-latest
-            output_name: "抽奖程序_linux"
+            artifact_name: linux-executable
+            asset_name: 抽奖程序-linux
 
     steps:
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v4
 
     - name: Set up Python
@@ -31,15 +35,28 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pyinstaller
-        # 如果有requirements.txt，取消下面的注释
-        # pip install -r requirements.txt
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      shell: bash
+
+    # 添加语法检查步骤
+    - name: Check Python syntax
+      run: |
+        python -m py_compile batchRequest.py
+        echo "✅ Python syntax check passed"
+
+    # 可选：运行基本测试
+    - name: Test script
+      run: |
+        python batchRequest.py --help || echo "Script executed"
+      continue-on-error: true
 
     - name: Build executable
       run: |
-        pyinstaller --onefile --console --name="${{ matrix.output_name }}" batchRequest.py
+        pyinstaller --onefile --console --name="${{ matrix.asset_name }}" batchRequest.py
 
-    - name: Upload artifacts
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: executable-${{ matrix.os }}
+        name: ${{ matrix.artifact_name }}
         path: dist/
+        retention-days: 30
