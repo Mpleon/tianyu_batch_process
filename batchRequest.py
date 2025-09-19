@@ -16,7 +16,7 @@ def main():
     }
 
     cnt = 0
-    for
+    
     while cnt < times:
         time.sleep(1)
         cnt += 1
